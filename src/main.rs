@@ -27,23 +27,27 @@ struct Player {
 }
 
 #[derive(Resource)]
-struct ControlMessage {
+struct ExternalControl {
     control_sequence: Arc<Mutex<String>>
 }
 
 fn main() {
     let config: Config = load_config_file("./config.toml");
     let skymap: SkyMap = load_skymap_file("./skymap.json").unwrap();
-    start_subscriber();
+    let external_control = ExternalControl { 
+        control_sequence: Arc::new(Mutex::new(String::new()))
+    };
     
     App::new()
         .insert_resource(config)
         .insert_resource(skymap)
+        .insert_resource(external_control)
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_systems(
             Startup,
             (
+                start_subscriber,
                 window_setup,
                 player_setup,
                 text_setup,
@@ -61,8 +65,9 @@ fn main() {
         .run();
 }
 
-fn start_subscriber() {
+fn start_subscriber() { // external_control: Res<ExternalControl>) {
     thread::spawn(move || {
+        // let control_sequence = external_control.control_sequence;
         let context = zmq::Context::new();
         let subscriber = context.socket(zmq::SUB).unwrap();
         
@@ -75,8 +80,10 @@ fn start_subscriber() {
             let subscriber = subscriber.lock().unwrap();
             match subscriber.recv_msg(0) {
                 Ok(msg) => {
-                    
-                    println!("Received message: {}", msg.as_str().unwrap());
+                    // let mut control_sequence = control_sequence.lock().unwrap();
+                    let message = msg.as_str().unwrap();
+                    // *control_sequence = message.to_string();
+                    println!("Received message: {}", message);
                 },
                 Err(e) => {
                     eprintln!("Failed to receive message: {}", e);
