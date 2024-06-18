@@ -1,0 +1,13 @@
+[package]
+name = "star_eater"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.13.2"
+bevy_rapier3d = "0.26.0"
+config-file = "0.2.3"
+rand = "0.8.5"
+serde = "1.0.203"
+serde_json = "1.0.117"
+zmq = "0.10.0"
