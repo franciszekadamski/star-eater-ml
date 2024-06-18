@@ -38,7 +38,8 @@ struct ControlMessageReceiver {
 
 #[derive(Resource)]
 struct ControlMessage {
-    message: String
+    input: String,
+    output: String
 }
 
 fn main() {
@@ -53,7 +54,10 @@ fn main() {
         .insert_resource(ControlMessageReceiver { 
             receiver: Arc::new(Mutex::new(receiver))
         })
-        .insert_resource(ControlMessage { message: String::new() })
+        .insert_resource(ControlMessage {
+            input: String::new(),
+            output: String::new()
+        })
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_systems(
@@ -112,9 +116,9 @@ fn receive_message(
     mut control_message: ResMut<ControlMessage>
 ) {
     let receiver = control_message_receiver.receiver.lock().unwrap();
-    control_message.message = String::new();
+    control_message.input = String::new();
     if let Ok(message) = receiver.try_recv() {
-        control_message.message = message;
+        control_message.input = message;
     }
 }
 
@@ -403,10 +407,9 @@ fn control_player_by_control_message(
 ) {
     let delta_t = time.delta_seconds();
     let (mut velocity, mut transform) = player_query.single_mut();
-    let external_control_key = &control_message.message;
 
     let control_message_is = |key: &str| {
-        control_message.message == key.to_string()
+        control_message.input == key.to_string()
     };
      
     if control_message_is("w") {
