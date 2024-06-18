@@ -27,27 +27,33 @@ struct Player {
 }
 
 #[derive(Resource)]
-struct ExternalControl {
-    control_sequence: Arc<Mutex<String>>
+struct ControlMessageSender {
+    sender: mpsc::Sender<String>,
+}
+
+#[derive(Resource)]
+struct ControlMessageReceiver {
+    receiver: Arc<Mutex<mpsc::Receiver<String>>>
 }
 
 fn main() {
     let config: Config = load_config_file("./config.toml");
     let skymap: SkyMap = load_skymap_file("./skymap.json").unwrap();
-    let external_control = ExternalControl { 
-        control_sequence: Arc::new(Mutex::new(String::new()))
-    };
+    let (sender, receiver) = mpsc::channel::<String>();
     
     App::new()
         .insert_resource(config)
         .insert_resource(skymap)
-        .insert_resource(external_control)
+        .insert_resource(ControlMessageSender { sender })
+        .insert_resource(ControlMessageReceiver { 
+            receiver: Arc::new(Mutex::new(receiver))
+        })
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_systems(
             Startup,
             (
-                start_subscriber,
+                start_subscriber_sending_events,
                 window_setup,
                 player_setup,
                 text_setup,
@@ -58,6 +64,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                receive_message,
                 control_player_with_keyboard,
                 check_sensor_collisions
             ).chain()
@@ -65,10 +72,10 @@ fn main() {
         .run();
 }
 
-fn start_subscriber(external_control: ResMut<ExternalControl>) {
-    let control_sequence = &external_control.control_sequence;
-    let (sender, receiver) = mpsc::channel::<String>();
-
+fn start_subscriber_sending_events(
+    control_message_sender: Res<ControlMessageSender>
+) {
+    let sender = control_message_sender.sender.clone();
     thread::spawn(move || {
         let context = zmq::Context::new();
         let subscriber = context.socket(zmq::SUB).unwrap();
@@ -83,22 +90,22 @@ fn start_subscriber(external_control: ResMut<ExternalControl>) {
             match subscriber.recv_msg(0) {
                 Ok(msg) => {
                     let message = msg.as_str().unwrap();
-                    if let Err(err) = sender.send(message.to_string()) {
-                        println!("Failed to export message to main thread");
-                    };
-                    println!("Received message: {}", message);
+                    sender.send(message.to_string()).unwrap();
                 },
                 Err(e) => {
                     eprintln!("Failed to receive message: {}", e);
                 },
             }
-            println!("Checked for message");
         }
     });
+}
 
-    loop {
-        let received = receiver.recv().unwrap();
-        println!("From side thread: {}", received);
+fn receive_message(
+    control_message_receiver: Res<ControlMessageReceiver>
+) {
+    let receiver = control_message_receiver.receiver.lock().unwrap();
+    if let Ok(message) = receiver.try_recv() {
+        println!("{}", message);
     }
 }
 
