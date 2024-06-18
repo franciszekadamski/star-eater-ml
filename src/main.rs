@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 use bevy::{
@@ -65,9 +65,11 @@ fn main() {
         .run();
 }
 
-fn start_subscriber() { // external_control: Res<ExternalControl>) {
+fn start_subscriber(external_control: ResMut<ExternalControl>) {
+    let control_sequence = &external_control.control_sequence;
+    let (sender, receiver) = mpsc::channel::<String>();
+
     thread::spawn(move || {
-        // let control_sequence = external_control.control_sequence;
         let context = zmq::Context::new();
         let subscriber = context.socket(zmq::SUB).unwrap();
         
@@ -80,9 +82,10 @@ fn start_subscriber() { // external_control: Res<ExternalControl>) {
             let subscriber = subscriber.lock().unwrap();
             match subscriber.recv_msg(0) {
                 Ok(msg) => {
-                    // let mut control_sequence = control_sequence.lock().unwrap();
                     let message = msg.as_str().unwrap();
-                    // *control_sequence = message.to_string();
+                    if let Err(err) = sender.send(message.to_string()) {
+                        println!("Failed to export message to main thread");
+                    };
                     println!("Received message: {}", message);
                 },
                 Err(e) => {
@@ -92,6 +95,11 @@ fn start_subscriber() { // external_control: Res<ExternalControl>) {
             println!("Checked for message");
         }
     });
+
+    loop {
+        let received = receiver.recv().unwrap();
+        println!("From side thread: {}", received);
+    }
 }
 
 fn window_setup(
