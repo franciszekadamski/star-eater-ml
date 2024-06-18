@@ -1,0 +1,42 @@
+fullscreen = true
+show_cursor = false
+
+camera_position = [0.0, 0.0, 0.0]
+camera_looking_at = [1.0, 1.0, 1.0]
+
+camera_shift = [0.5, 0.15]
+camera_target = [3.0, 1.0]
+
+create_sky_dome = true
+sky_dome_size = 500.0
+sky_dome_color = [0.0, 0.0, 0.0]
+
+fog_color = [0.0, 0.001, 0.01]
+fog_falloff_start = 600.0
+fog_falloff_end = 900.0
+
+sphere_radius = 0.3
+sphere_emissive_color = [100.0, 60.0, 40.0, 100.0]
+
+generate_stars = true
+number_of_spheres = 500
+lower_generation_space_limit = -50
+higher_generation_space_limit = 50
+
+motion_blur_shutter_angle = 1.0
+motion_blur_sample_number = 2
+
+bloom_intensity = 0.7
+
+camera_attached_to_player = true
+player_color = [0.0, 0.0, 1.0, 0.0]
+player_sphere_radius = 0.07
+max_player_velocity = 1.0
+restitution = 0.01
+
+use_angular_velocity = true
+rotation_reduction_with_angular_velocity = 0.05
+rotation_velocity_factor = 0.8
+movement_velocity_factor = 0.1
+gravity_scale = 0.0
+
