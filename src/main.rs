@@ -36,6 +36,11 @@ struct ControlMessageReceiver {
     receiver: Arc<Mutex<mpsc::Receiver<String>>>
 }
 
+#[derive(Resource)]
+struct ControlMessage {
+    message: String
+}
+
 fn main() {
     let config: Config = load_config_file("./config.toml");
     let skymap: SkyMap = load_skymap_file("./skymap.json").unwrap();
@@ -48,6 +53,7 @@ fn main() {
         .insert_resource(ControlMessageReceiver { 
             receiver: Arc::new(Mutex::new(receiver))
         })
+        .insert_resource(ControlMessage { message: String::new() })
         .add_plugins(DefaultPlugins)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_systems(
@@ -66,6 +72,7 @@ fn main() {
             (
                 receive_message,
                 control_player_with_keyboard,
+                control_player_by_control_message,
                 check_sensor_collisions
             ).chain()
         )
@@ -101,11 +108,13 @@ fn start_subscriber_sending_events(
 }
 
 fn receive_message(
-    control_message_receiver: Res<ControlMessageReceiver>
+    control_message_receiver: Res<ControlMessageReceiver>,
+    mut control_message: ResMut<ControlMessage>
 ) {
     let receiver = control_message_receiver.receiver.lock().unwrap();
+    control_message.message = String::new();
     if let Ok(message) = receiver.try_recv() {
-        println!("{}", message);
+        control_message.message = message;
     }
 }
 
@@ -312,7 +321,7 @@ fn control_player_with_keyboard(
 ) {
     let delta_t = time.delta_seconds();
     let (mut velocity, mut transform) = player_query.single_mut();
-    
+     
     if keycode.pressed(KeyCode::KeyW) {
         let movement_direction = transform.forward();
         velocity.linvel += movement_direction * config.movement_velocity_factor;
@@ -369,6 +378,93 @@ fn control_player_with_keyboard(
             } 
     
             if keycode.pressed(KeyCode::ArrowRight) {
+                let rotation_direction = transform.down();
+                velocity.angvel += rotation_direction * config.rotation_velocity_factor * config.rotation_reduction_with_angular_velocity;
+            }
+        },
+    }
+    
+    if config.camera_attached_to_player {
+        let mut camera_transform = camera_query.single_mut();
+        camera_transform.translation = transform.translation + (transform.back() * config.camera_shift[0]) + (transform.up() * config.camera_shift[1]);
+        camera_transform.look_at(
+            transform.translation + (transform.forward() * config.camera_target[0]),
+            transform.up() * config.camera_target[1]
+        );
+    }
+}
+
+fn control_player_by_control_message(
+    mut player_query: Query<(&mut Velocity, &mut Transform), With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    time: Res<Time>,
+    config: Res<Config>,
+    control_message: Res<ControlMessage>
+) {
+    let delta_t = time.delta_seconds();
+    let (mut velocity, mut transform) = player_query.single_mut();
+    let external_control_key = &control_message.message;
+
+    let control_message_is = |key: &str| {
+        control_message.message == key.to_string()
+    };
+     
+    if control_message_is("w") {
+        let movement_direction = transform.forward();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    } else if control_message_is("s") {
+        let movement_direction = transform.back();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    } 
+    
+    if control_message_is("a") {
+        let movement_direction = transform.left();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    } else if control_message_is("d") {
+        let movement_direction = transform.right();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    } 
+    
+    if control_message_is("e") {
+        let movement_direction = transform.up();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    } else if control_message_is("q") {
+        let movement_direction = transform.down();
+        velocity.linvel += movement_direction * config.movement_velocity_factor;
+    }
+
+    match config.use_angular_velocity {
+        false => {
+            if control_message_is("i") {
+                transform.rotate_local_x(config.rotation_velocity_factor * delta_t);
+            } 
+            if control_message_is("k") {
+                transform.rotate_local_x(-config.rotation_velocity_factor * delta_t);
+            }
+            if control_message_is("j") {
+                transform.rotate_local_y(config.rotation_velocity_factor * delta_t);
+            } 
+            if control_message_is("l") {
+                transform.rotate_local_y(-config.rotation_velocity_factor * delta_t);
+            }    
+        },
+        true => {
+            if control_message_is("i") {
+                let rotation_direction = transform.right();
+                velocity.angvel += rotation_direction * config.rotation_velocity_factor * config.rotation_reduction_with_angular_velocity;
+            } 
+    
+            if control_message_is("k") {
+                let rotation_direction = transform.left();
+                velocity.angvel += rotation_direction * config.rotation_velocity_factor * config.rotation_reduction_with_angular_velocity;
+            }
+    
+            if control_message_is("j") {
+                let rotation_direction = transform.up();
+                velocity.angvel += rotation_direction * config.rotation_velocity_factor * config.rotation_reduction_with_angular_velocity;
+            } 
+    
+            if control_message_is("l") {
                 let rotation_direction = transform.down();
                 velocity.angvel += rotation_direction * config.rotation_velocity_factor * config.rotation_reduction_with_angular_velocity;
             }
