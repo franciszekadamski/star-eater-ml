@@ -459,7 +459,7 @@ fn control_player_by_control_message(
     let control_message_is = |key: &str| {
         control_message.input == key.to_string()
     };
-     
+         
     if control_message_is("w") {
         let movement_direction = transform.forward();
         velocity.linvel += movement_direction * config.movement_velocity_factor;

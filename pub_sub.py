@@ -1,6 +1,7 @@
 import time
 import zmq
 import json
+import inputimeout
 
 def start_publisher():
     context = zmq.Context()
@@ -15,23 +16,40 @@ def start_publisher():
 
     poller = zmq.Poller()
     poller.register(subscriber, zmq.POLLIN)
+
+    sequences = [
+        ["w" for i in range(20)],
+        ["l" for i in range(20)],
+        ["j" for i in range(20)],
+    ]
     
+    messages = []
+    
+    for sequence in sequences:
+        messages.extend(sequence)
+    
+    index = 0
+
     try:
         while True:
-            message = input()
+            message = messages[index]
+            index += 1
+            if index == len(messages):
+                index = 0
+                
             publisher.send_string(message)
-            # print(f"\nPublished: {message}")
 
             events = poller.poll(5)
             if events:
                 message = subscriber.recv_string()
                 message = message.split("SEP")
-                transform_string = message[0].replace("Transform ", "")
-                velocity_string = message[1].replace("Velocity ", "")
-                # transform = json.loads(transform_string)
-                # velocity = json.loads(velocity_string)
-                print(transform_string)
-                print(velocity_string)
+                transform_string = message[0].replace("Transform ", "").replace("Quat", "").replace("Vec3", "").replace(")", "]").replace("(", "[").replace('translation', '"translation"').replace('rotation', '"rotation"').replace('scale', '"scale"')
+                velocity_string = message[1].replace("Velocity ", "").replace("Quat", "").replace("Vec3", "").replace(")", "]").replace("(", "[").replace('linvel', '"linvel"').replace('angvel', '"angvel"')
+                transform = json.loads(transform_string)
+                velocity = json.loads(velocity_string)
+                print(transform["translation"])
+                # print(f"\n{velocity}")
+            time.sleep(0.05)
     except KeyboardInterrupt:
         print("Publisher interrupted, closing...")
     finally:
