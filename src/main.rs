@@ -37,6 +37,16 @@ struct ControlMessageReceiver {
 }
 
 #[derive(Resource)]
+struct PublisherMessageSender {
+    sender: mpsc::Sender<String>,
+}
+
+#[derive(Resource)]
+struct PublisherMessageReceiver {
+    receiver: Arc<Mutex<mpsc::Receiver<String>>>
+}
+
+#[derive(Resource)]
 struct ControlMessage {
     input: String,
     output: String
@@ -45,14 +55,19 @@ struct ControlMessage {
 fn main() {
     let config: Config = load_config_file("./config.toml");
     let skymap: SkyMap = load_skymap_file("./skymap.json").unwrap();
-    let (sender, receiver) = mpsc::channel::<String>();
+    let (control_sender, control_receiver) = mpsc::channel::<String>();
+    let (publisher_sender, publisher_receiver) = mpsc::channel::<String>();
     
     App::new()
         .insert_resource(config)
         .insert_resource(skymap)
-        .insert_resource(ControlMessageSender { sender })
+        .insert_resource(ControlMessageSender { sender: control_sender })
         .insert_resource(ControlMessageReceiver { 
-            receiver: Arc::new(Mutex::new(receiver))
+            receiver: Arc::new(Mutex::new(control_receiver))
+        })
+        .insert_resource(PublisherMessageSender { sender: publisher_sender })
+        .insert_resource(PublisherMessageReceiver {
+            receiver: Arc::new(Mutex::new(publisher_receiver))
         })
         .insert_resource(ControlMessage {
             input: String::new(),
@@ -63,7 +78,8 @@ fn main() {
         .add_systems(
             Startup,
             (
-                start_subscriber_sending_events,
+                start_subscriber,
+                start_publisher,
                 window_setup,
                 player_setup,
                 text_setup,
@@ -74,7 +90,8 @@ fn main() {
         .add_systems(
             Update,
             (
-                receive_message,
+                receive_control_message,
+                pass_data_to_publisher_thread,
                 control_player_with_keyboard,
                 control_player_by_control_message,
                 check_sensor_collisions
@@ -83,7 +100,7 @@ fn main() {
         .run();
 }
 
-fn start_subscriber_sending_events(
+fn start_subscriber(
     control_message_sender: Res<ControlMessageSender>
 ) {
     let sender = control_message_sender.sender.clone();
@@ -104,14 +121,14 @@ fn start_subscriber_sending_events(
                     sender.send(message.to_string()).unwrap();
                 },
                 Err(e) => {
-                    eprintln!("Failed to receive message: {}", e);
+                    eprintln!("Failed to subscriber message: {}", e);
                 },
             }
         }
     });
 }
 
-fn receive_message(
+fn receive_control_message(
     control_message_receiver: Res<ControlMessageReceiver>,
     mut control_message: ResMut<ControlMessage>
 ) {
@@ -120,6 +137,33 @@ fn receive_message(
     if let Ok(message) = receiver.try_recv() {
         control_message.input = message;
     }
+}
+
+fn start_publisher(
+    publisher_message_receiver: Res<PublisherMessageReceiver>,
+    control_message: Res<ControlMessage>
+) {
+    let receiver = publisher_message_receiver.receiver.clone();
+    thread::spawn(move || {
+        let context = zmq::Context::new();
+        let publisher = context.socket(zmq::PUB).unwrap();
+        
+        assert!(publisher.bind("tcp://127.0.0.1:5679").is_ok());
+        
+        loop {
+            let receiver = receiver.lock().unwrap();
+            if let Ok(message) = receiver.try_recv() {
+                publisher.send(&message, 0).expect("Failed to send data");
+            }
+        }
+    });
+}
+
+fn pass_data_to_publisher_thread(
+    publisher_message_sender: Res<PublisherMessageSender>
+) {
+    let sender = publisher_message_sender.sender.clone();
+    sender.send("Hello from main thread!".to_string()).expect("Failed to send message to publisher thread");
 }
 
 fn window_setup(
