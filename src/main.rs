@@ -160,10 +160,14 @@ fn start_publisher(
 }
 
 fn pass_data_to_publisher_thread(
-    publisher_message_sender: Res<PublisherMessageSender>
+    publisher_message_sender: Res<PublisherMessageSender>,
+    player: Query<(&Transform, &Velocity), With<Player>>
 ) {
+    let (transform, velocity) = player.single();
+    let message = format!("{:?}SEP{:?}", transform, velocity);
     let sender = publisher_message_sender.sender.clone();
-    sender.send("Hello from main thread!".to_string()).expect("Failed to send message to publisher thread");
+    sender.send(message).expect("Failed to send message to publisher thread");
+    
 }
 
 fn window_setup(

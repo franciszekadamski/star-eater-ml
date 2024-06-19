@@ -1,5 +1,6 @@
 import time
 import zmq
+import json
 
 def start_publisher():
     context = zmq.Context()
@@ -17,14 +18,20 @@ def start_publisher():
     
     try:
         while True:
-            message = input("\nInput a control sequence:\n")
+            message = input()
             publisher.send_string(message)
-            print(f"\nPublished: {message}")
+            # print(f"\nPublished: {message}")
 
             events = poller.poll(5)
             if events:
                 message = subscriber.recv_string()
-                print(f"\nReceived: {message}")
+                message = message.split("SEP")
+                transform_string = message[0].replace("Transform ", "")
+                velocity_string = message[1].replace("Velocity ", "")
+                # transform = json.loads(transform_string)
+                # velocity = json.loads(velocity_string)
+                print(transform_string)
+                print(velocity_string)
     except KeyboardInterrupt:
         print("Publisher interrupted, closing...")
     finally:
