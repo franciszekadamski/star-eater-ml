@@ -1,4 +1,4 @@
-fullscreen = true
+fullscreen = false
 show_cursor = false
 
 camera_position = [0.0, 0.0, 0.0]
@@ -18,7 +18,7 @@ fog_falloff_end = 900.0
 sphere_radius = 0.3
 sphere_emissive_color = [100.0, 60.0, 40.0, 100.0]
 
-generate_stars = true
+generate_stars = false
 number_of_spheres = 500
 lower_generation_space_limit = -50
 higher_generation_space_limit = 50

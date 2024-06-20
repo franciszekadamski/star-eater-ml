@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
+use std::time::Duration;
 
 use bevy::{
     prelude::*,
@@ -25,6 +26,9 @@ use data_loader::{load_config_file, load_skymap_file, Config, SkyMap};
 struct Player {
     stars_eaten: i32
 }
+
+#[derive(Component)]
+struct Star;
 
 #[derive(Resource)]
 struct ControlMessageSender {
@@ -119,6 +123,7 @@ fn start_subscriber(
                 Ok(msg) => {
                     let message = msg.as_str().unwrap();
                     sender.send(message.to_string()).unwrap();
+                    thread::sleep(Duration::from_millis(4));
                 },
                 Err(e) => {
                     eprintln!("Failed to subscriber message: {}", e);
@@ -154,6 +159,7 @@ fn start_publisher(
             let receiver = receiver.lock().unwrap();
             if let Ok(message) = receiver.try_recv() {
                 publisher.send(&message, 0).expect("Failed to send data");
+                thread::sleep(Duration::from_millis(4));
             }
         }
     });
@@ -161,10 +167,29 @@ fn start_publisher(
 
 fn pass_data_to_publisher_thread(
     publisher_message_sender: Res<PublisherMessageSender>,
-    player: Query<(&Transform, &Velocity), With<Player>>
+    player_query: Query<(&Transform, &Velocity, &Player), With<Player>>,
+    stars_query: Query<&Transform, With<Star>>
 ) {
-    let (transform, velocity) = player.single();
-    let message = format!("{:?}SEP{:?}", transform, velocity);
+    let mut message = format!("{}", stars_query.iter().collect::<Vec<&Transform>>().len());
+    let mut star_relative_position = Vec3::new(0.0, 0.0, 0.0);
+    let (player_transform, player_velocity, player) = player_query.single();
+    for star_transform in stars_query.iter() {
+        star_relative_position = star_transform.translation - player_transform.translation;
+        message = format!("{}, [{}, {}, {}]",
+            message,
+            star_relative_position[0],
+            star_relative_position[1],
+            star_relative_position[2]
+        );
+    }
+    message = format!("{{\"stars\":[{}], \"stars_eaten\": {}, \"rotation\": [{}, {}, {}, {}]}}", 
+        message, 
+        player.stars_eaten,
+        player_transform.rotation.x,
+        player_transform.rotation.y,
+        player_transform.rotation.z,
+        player_transform.rotation.w
+    );
     let sender = publisher_message_sender.sender.clone();
     sender.send(message).expect("Failed to send message to publisher thread");
     
@@ -337,7 +362,8 @@ fn scene_setup(
                     Collider::ball(config.sphere_radius),
                     Sensor,
                     ActiveEvents::COLLISION_EVENTS,
-                    ActiveCollisionTypes::STATIC_STATIC
+                    ActiveCollisionTypes::STATIC_STATIC,
+                    Star
                 )
             );
         }
@@ -357,7 +383,8 @@ fn scene_setup(
                     Collider::ball(config.sphere_radius),
                     Sensor,
                     ActiveEvents::COLLISION_EVENTS,
-                    ActiveCollisionTypes::STATIC_STATIC
+                    ActiveCollisionTypes::STATIC_STATIC,
+                    Star
                 )
             );
         }
