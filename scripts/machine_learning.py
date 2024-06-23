@@ -30,6 +30,8 @@ class DecisionTreeActor():
         self.n_last_samples = 3
 
         self.data = {}
+        self.X_data = []
+        self.y_data = []
         self.X_train = []
         self.X_test = []
         self.y_train = []
@@ -41,31 +43,56 @@ class DecisionTreeActor():
 
 
     def save_model(self, filename):
-        joblib.dump(self.model, filename)
+        joblib.dump(self.model, os.path.join(self.models_dir, filename))
 
 
     def samples_to_dataset(self, output_filename):
         filenames = os.listdir(self.sample_dir)
+        data = {
+            "features": [],
+            "targets": []
+        }
         for filename in filenames:
-            with open(filename, 'r') as f:
-                content = json.loads(f.read())                
-            print(f"{filename}:\n{content}")
+            with open(os.path.join(self.sample_dir, filename), 'r') as f:
+                content = json.loads(f.read())
+            X, y = self._accumulate_rows(content)
+            data["features"].extend(X)
+            data["targets"].extend(y)
 
+        with open(os.path.join(self.dataset_dir, output_filename), 'w') as f:
+            f.write(json.dumps(data, indent=4))
+                
+
+    def _accumulate_rows(self, sample):
+        input_X = sample["observations"]
+        input_y = sample["actions"]
+        
+        output_X = []
+        output_y = []
+        
+        for _ in range(len(input_X) - self.n_last_samples):
+            output_X.append(self._adjust_input(input_X))
+            input_X.pop()
+            output_y.append(input_y.pop())
+        
+        return output_X, output_y
+            
 
     def read_dataset(self, filepath):
-        with open(filepath, 'r') as f:
-            self.data = json.loads(f.read())
+        with open(os.path.join(self.dataset_dir, filepath), 'r') as f:
+            data = json.loads(f.read())
+            self.X_data = data["features"]
+            self.y_data = data["targets"]
 
 
     def train_test_split(self, validation=False):
-        self._adjust_data()
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.data["observations"],
-            self.data["actions"],
+            self.X_data,
+            self.y_data,
             test_size=0.3
         )
         self.y_train = self._encode_targets(self.y_train)
-        self.y_test = self._encode_targest(self.y_test)
+        self.y_test = self._encode_targets(self.y_test)
 
 
     def _encode_targets(self, targets):
@@ -83,6 +110,8 @@ class DecisionTreeActor():
     
 
     def train(self):
+        print(len(self.X_train))
+        print(len(self.y_train))
         self.model.fit(self.X_train, self.y_train)
 
 
@@ -97,7 +126,7 @@ class DecisionTreeActor():
 
     def _adjust_input(self, input):
         input = np.asarray(input[-self.n_last_samples:]).flatten()
-        return input
+        return list(input)
 
 
     def act(self, input):

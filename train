@@ -10,7 +10,7 @@ with open("./mapping.json", 'r') as f:
 
 def main():
     actor = DecisionTreeActor(
-        dataset_dir="./ml_datasets",
+        dataset_dir="./datasets",
         sample_dir="./samples",
         models_dir="./models",
         model_path=None,
