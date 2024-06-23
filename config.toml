@@ -19,9 +19,9 @@ sphere_radius = 0.3
 sphere_emissive_color = [100.0, 60.0, 40.0, 100.0]
 
 generate_stars = false
-number_of_spheres = 500
-lower_generation_space_limit = -50
-higher_generation_space_limit = 50
+number_of_spheres = 50
+lower_generation_space_limit = -100
+higher_generation_space_limit = 100
 
 motion_blur_shutter_angle = 1.0
 motion_blur_sample_number = 2
