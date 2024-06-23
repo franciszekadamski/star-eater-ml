@@ -1,0 +1,28 @@
+#!/usr/bin/python3
+import json
+
+from scripts.machine_learning import DecisionTreeActor
+
+
+with open("./mapping.json", 'r') as f:
+    mapping = json.loads(f.read())
+
+
+def main():
+    actor = DecisionTreeActor(
+        dataset_dir="./ml_datasets",
+        sample_dir="./samples",
+        models_dir="./models",
+        model_path=None,
+        mapping=mapping
+    )
+    actor.samples_to_dataset("decision_tree_dataset.json")
+    actor.read_dataset("decision_tree_dataset.json")
+    actor.train_test_split()
+    actor.train()
+    actor.evaluate()
+    actor.save_model("decision_tree.pkl")
+
+
+if __name__ == "__main__":
+    main()

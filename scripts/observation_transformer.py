@@ -31,6 +31,7 @@ class ObservationTransformer:
 
         return sample
 
+
     # TODO delay
     @staticmethod
     def min_transform(input_sample, trim):
@@ -54,8 +55,8 @@ class ObservationTransformer:
     @staticmethod
     def all_transform(input_sample, trim):
         result = {
-            "observation": [],
-            "action": []
+            "observations": [],
+            "actions": []
         }
         
         for record in input_sample[:-trim]:

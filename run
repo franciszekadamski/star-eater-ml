@@ -9,6 +9,7 @@ def main():
         mode="mlmodel",
         save_scored=True
     )
+    bootstrap.use_dummy_sequence()
     bootstrap.run()
 
 
