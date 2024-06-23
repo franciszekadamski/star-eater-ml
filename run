@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+
+from scripts.bootstrap import Bootstrap
+
+
+def main():
+    bootstrap = Bootstrap(
+        verbose=2,
+        mode="mlmodel",
+        save_scored=True
+    )
+    bootstrap.run()
+
+
+if __name__ == "__main__":
+    main()
