@@ -16,7 +16,7 @@ class SimulationInterface:
         subscriber_port="5679",
         poll_timeout_ms=5,
         frequency_hz=300,
-        max_history_length=1800 # few minutes of playing
+        max_history_length=18000
     ):
         self.address: str = address
         self.publisher_port: str = publisher_port

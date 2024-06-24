@@ -18,8 +18,8 @@ fog_falloff_end = 900.0
 sphere_radius = 0.3
 sphere_emissive_color = [100.0, 60.0, 40.0, 100.0]
 
-generate_stars = false
-number_of_spheres = 50
+generate_stars = true
+number_of_spheres = 100
 lower_generation_space_limit = -100
 higher_generation_space_limit = 100
 

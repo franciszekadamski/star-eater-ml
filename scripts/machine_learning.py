@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from sklearn.tree import DecisionTreeClassifier
 import joblib
 import json
 import os
@@ -15,7 +14,10 @@ class DecisionTreeActor():
             sample_dir,
             models_dir,
             model_path,
-            mapping
+            mapping,
+            mode,
+            drop_empty_keys=False,
+            model=None
     ):
         self.dataset_dir = dataset_dir
         self.sample_dir = sample_dir
@@ -23,11 +25,18 @@ class DecisionTreeActor():
         self.model_path = model_path
         self.mapping = mapping
         self.reverse_mapping = {number: key for key, number in mapping.items()}
-        self.model = DecisionTreeClassifier()
+
+        self.model = model
+        if self.model:
+            self.model_path = None
+
         if self.model_path:
             self._load_model()
 
-        self.n_last_samples = 3
+        self.mode = mode
+        self.drop_empty_keys = drop_empty_keys
+        
+        self.n_last_samples = 20
 
         self.data = {}
         self.X_data = []
@@ -53,14 +62,18 @@ class DecisionTreeActor():
             "targets": []
         }
         for filename in filenames:
-            with open(os.path.join(self.sample_dir, filename), 'r') as f:
-                content = json.loads(f.read())
-            X, y = self._accumulate_rows(content)
-            data["features"].extend(X)
-            data["targets"].extend(y)
+            if self.mode in filename:
+                with open(os.path.join(self.sample_dir, filename), 'r') as f:
+                    content = json.loads(f.read())
+                X, y = self._accumulate_rows(content)
+                data["features"].extend(X)
+                data["targets"].extend(y)
 
+        assert data["features"] != []
+        assert data["targets"] != []
         with open(os.path.join(self.dataset_dir, output_filename), 'w') as f:
             f.write(json.dumps(data, indent=4))
+            print(f"Saved dataset {output_filename}")
                 
 
     def _accumulate_rows(self, sample):
@@ -71,9 +84,17 @@ class DecisionTreeActor():
         output_y = []
         
         for _ in range(len(input_X) - self.n_last_samples):
-            output_X.append(self._adjust_input(input_X))
+            y = input_y.pop()
+            X = self._adjust_input(input_X)
             input_X.pop()
-            output_y.append(input_y.pop())
+
+            if not self.drop_empty_keys:
+                output_X.append(X)
+                output_y.append(y)
+            else:
+                if y != "":
+                    output_X.append(X)
+                    output_y.append(y)
         
         return output_X, output_y
             
@@ -110,8 +131,6 @@ class DecisionTreeActor():
     
 
     def train(self):
-        print(len(self.X_train))
-        print(len(self.y_train))
         self.model.fit(self.X_train, self.y_train)
 
 
@@ -130,14 +149,16 @@ class DecisionTreeActor():
 
 
     def act(self, input):
+        # print("act callled")
         try:
             assert type(input) == list
         except AssertionError:
             raise Exception("Act method should receive list of observations. Are you sure you are passing only observation list instead of a dictionary? \nHint: example of usage: \n\tActorChild.act(data['obseravtions'])")
             
         input = self._adjust_input(input)
-        encoded_prediction = self.model.predict(input)
+        encoded_prediction = self.model.predict([input])
         control_sequence = self._decode_targets(encoded_prediction)
+        print(control_sequence)
         return control_sequence
 
 

@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 import json
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 from scripts.machine_learning import DecisionTreeActor
 
@@ -13,15 +16,18 @@ def main():
         dataset_dir="./datasets",
         sample_dir="./samples",
         models_dir="./models",
-        model_path=None,
-        mapping=mapping
+        model_path="./model.pkl",
+        mapping=mapping,
+        mode="ALL",
+        drop_empty_keys=True,
+        model=KNeighborsClassifier()
     )
-    actor.samples_to_dataset("decision_tree_dataset.json")
-    actor.read_dataset("decision_tree_dataset.json")
+    actor.samples_to_dataset("dataset.json")
+    actor.read_dataset("dataset.json")
     actor.train_test_split()
     actor.train()
     actor.evaluate()
-    actor.save_model("decision_tree.pkl")
+    actor.save_model("model.pkl")
 
 
 if __name__ == "__main__":

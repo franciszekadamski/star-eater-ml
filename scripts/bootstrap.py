@@ -29,7 +29,7 @@ class Bootstrap:
             ml_data_dir="./datasets",
             sample_dir="./samples",
             models_dir="./models",
-            model_path=None, # "./decision_tree.pkl",
+            model_path="./models/model.pkl",
             mapping_path="./mapping.json"
     ):
         self.mode = mode
@@ -50,10 +50,12 @@ class Bootstrap:
             sample_dir=self.sample_dir,
             models_dir=self.models_dir,
             model_path=self.model_path,
-            mapping=self.mapping      
+            mapping=self.mapping,
+            mode=self.transform_single_mode
         )
 
         self.process_controller.start_simulation()
+        time.sleep(5)
         self.simulation.run()
 
         self.sequence = []

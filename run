@@ -6,10 +6,10 @@ from scripts.bootstrap import Bootstrap
 def main():
     bootstrap = Bootstrap(
         verbose=2,
-        mode="mlmodel",
+        mode="mlmodel", # "mlmodel",
+        transform_single_mode="ALL",
         save_scored=True
     )
-    bootstrap.use_dummy_sequence()
     bootstrap.run()
 
 
