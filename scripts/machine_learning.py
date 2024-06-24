@@ -36,7 +36,7 @@ class DecisionTreeActor():
         self.mode = mode
         self.drop_empty_keys = drop_empty_keys
         
-        self.n_last_samples = 20
+        self.n_last_samples = 2
 
         self.data = {}
         self.X_data = []
