@@ -6,7 +6,7 @@ from scripts.bootstrap import Bootstrap
 def main():
     bootstrap = Bootstrap(
         verbose=2,
-        mode="mlmodel", # "mlmodel",
+        mode="mlmodel", # "mlmodel", "user"
         transform_single_mode="ALL",
         save_scored=True
     )

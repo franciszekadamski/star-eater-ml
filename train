@@ -3,9 +3,9 @@ import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
 from scripts.machine_learning import DecisionTreeActor
-
 
 with open("./mapping.json", 'r') as f:
     mapping = json.loads(f.read())
@@ -20,13 +20,15 @@ def main():
         mapping=mapping,
         mode="ALL",
         drop_empty_keys=True,
-        model=KNeighborsClassifier()
+        model=KNeighborsClassifier() # SVC(C=1.0, kernel='rbf', gamma='scale')
     )
-    actor.samples_to_dataset("dataset.json")
-    actor.read_dataset("dataset.json")
+    # actor.samples_to_dataset("dataset.json")
+    actor.samples_to_database()
+    actor.read_dataset("dataset.db")
     actor.train_test_split()
     actor.train()
-    actor.evaluate()
+    accuracy = actor.evaluate()
+    print(accuracy)
     actor.save_model("model.pkl")
 
 

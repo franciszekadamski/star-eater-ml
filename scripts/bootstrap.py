@@ -45,14 +45,15 @@ class Bootstrap:
         self.process_controller = ProcessController(verbose=self.verbose, flags=['--release'])
         self.simulation = SimulationInterface(verbose=self.verbose)
         self.observation_transformer = ObservationTransformer(["MIN", "ALL"])
-        self.actor = DecisionTreeActor(
-            dataset_dir=self.ml_data_dir,
-            sample_dir=self.sample_dir,
-            models_dir=self.models_dir,
-            model_path=self.model_path,
-            mapping=self.mapping,
-            mode=self.transform_single_mode
-        )
+        if self.mode == "mlmodel":
+            self.actor = DecisionTreeActor(
+                dataset_dir=self.ml_data_dir,
+                sample_dir=self.sample_dir,
+                models_dir=self.models_dir,
+                model_path=self.model_path,
+                mapping=self.mapping,
+                mode=self.transform_single_mode
+            )
 
         self.process_controller.start_simulation()
         time.sleep(5)

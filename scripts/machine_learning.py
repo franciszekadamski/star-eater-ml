@@ -5,6 +5,9 @@ from sklearn.metrics import accuracy_score
 import joblib
 import json
 import os
+import pandas as pd
+
+from scripts.database import DatabaseInterface
 
 
 class DecisionTreeActor():
@@ -17,7 +20,10 @@ class DecisionTreeActor():
             mapping,
             mode,
             drop_empty_keys=False,
-            model=None
+            model=None,
+            operate_on_json=False,
+            database_filename='dataset.db',
+            number_of_stars=10
     ):
         self.dataset_dir = dataset_dir
         self.sample_dir = sample_dir
@@ -35,9 +41,12 @@ class DecisionTreeActor():
 
         self.mode = mode
         self.drop_empty_keys = drop_empty_keys
-        
-        self.n_last_samples = 2
 
+        self.operate_on_json = operate_on_json
+        
+        self.n_last_samples = 56
+        self.number_of_stars = number_of_stars
+        
         self.data = {}
         self.X_data = []
         self.y_data = []
@@ -45,7 +54,8 @@ class DecisionTreeActor():
         self.X_test = []
         self.y_train = []
         self.y_test = []
-        
+
+        self.database = DatabaseInterface(os.path.join(self.dataset_dir, database_filename), self.n_last_samples * self.number_of_stars * 3 + self.n_last_samples)
 
     def _load_model(self):
         self.model = joblib.load(self.model_path)
@@ -55,26 +65,47 @@ class DecisionTreeActor():
         joblib.dump(self.model, os.path.join(self.models_dir, filename))
 
 
+    def samples_to_database(self):
+        self.database.remove()
+        self.database.create()
+        filenames = os.listdir(self.sample_dir)
+        for file_number, filename in enumerate(filenames):
+            if self.mode in filename:
+                print(f"Processing file number {file_number}/{len(filenames)}")
+                with open(os.path.join(self.sample_dir, filename), 'r') as f:
+                    content = json.loads(f.read())
+                X, y = self._accumulate_rows(content)
+                self.database.insert(X, y)
+                print(f"Processed file {filename}")
+
+
     def samples_to_dataset(self, output_filename):
         filenames = os.listdir(self.sample_dir)
         data = {
             "features": [],
             "targets": []
         }
-        for filename in filenames:
+        for file_number, filename in enumerate(filenames):
             if self.mode in filename:
+                print(f"Processing file number {file_number}/{len(filenames)}")
                 with open(os.path.join(self.sample_dir, filename), 'r') as f:
                     content = json.loads(f.read())
                 X, y = self._accumulate_rows(content)
                 data["features"].extend(X)
                 data["targets"].extend(y)
+                print(f"Processed file {filename}")
 
         assert data["features"] != []
         assert data["targets"] != []
-        with open(os.path.join(self.dataset_dir, output_filename), 'w') as f:
-            f.write(json.dumps(data, indent=4))
-            print(f"Saved dataset {output_filename}")
-                
+
+        if self.operate_on_json:
+            json_formatted = json.dumps(data, indent=4)
+            with open(os.path.join(self.dataset_dir, output_filename), 'w') as f:
+                f.write(json_formatted)
+                print(f"Saved dataset {output_filename}")
+        else:
+            joblib.dump(data, os.path.join(self.dataset_dir, output_filename))               
+
 
     def _accumulate_rows(self, sample):
         input_X = sample["observations"]
@@ -100,11 +131,22 @@ class DecisionTreeActor():
             
 
     def read_dataset(self, filepath):
-        with open(os.path.join(self.dataset_dir, filepath), 'r') as f:
-            data = json.loads(f.read())
-            self.X_data = data["features"]
-            self.y_data = data["targets"]
-
+        if filepath.endswith('.db'):
+            data_df = self.database.get_data()
+            row_length = len(data_df.iloc[0]) - 2
+            self.X_data = data_df[[f'feature_{i}' for i in range(row_length)]].to_numpy()
+            self.y_data = data_df['label'].to_numpy()
+        else:
+            if self.operate_on_json:
+                with open(os.path.join(self.dataset_dir, filepath), 'r') as f:
+                    data = json.loads(f.read())
+                    self.X_data = data["features"]
+                    self.y_data = data["targets"]
+            else:
+                data = joblib.load(self.dataset_dir, filepath)
+                self.X_data = data["features"]
+                self.y_data = data["targets"]
+            
 
     def train_test_split(self, validation=False):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -131,8 +173,9 @@ class DecisionTreeActor():
     
 
     def train(self):
+        print("Training model")
         self.model.fit(self.X_train, self.y_train)
-
+        print("Finished training")
 
     def partial_train(self, data):
         pass
@@ -140,7 +183,7 @@ class DecisionTreeActor():
 
     def evaluate(self):
         y_pred = self.model.predict(self.X_test)
-        accuracy = accuracy_score(self.y_test, y_pred)
+        return accuracy_score(self.y_test, y_pred)
         
 
     def _adjust_input(self, input):
@@ -149,7 +192,6 @@ class DecisionTreeActor():
 
 
     def act(self, input):
-        # print("act callled")
         try:
             assert type(input) == list
         except AssertionError:
@@ -164,4 +206,3 @@ class DecisionTreeActor():
 
     def dummy_act(self, input):
         return ['w' for _ in range(10)]
-
