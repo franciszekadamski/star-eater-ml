@@ -16,7 +16,8 @@ from scripts.process_controller import ProcessController
 from scripts.simulation_interface import SimulationInterface
 from scripts.preprocessing import Preprocessing
 from scripts.observation_transformer import ObservationTransformer
-from scripts.machine_learning import DecisionTreeActor
+from scripts.machine_learning import MLClassifier
+# from scripts.ann import RNNModel
 
 
 class Bootstrap:
@@ -26,9 +27,6 @@ class Bootstrap:
             save_scored=False,
             verbose=0,
             transform_single_mode="MIN",
-            ml_data_dir="./datasets",
-            sample_dir="./samples",
-            models_dir="./models",
             model_path="./models/model.pkl",
             mapping_path="./mapping.json"
     ):
@@ -36,24 +34,15 @@ class Bootstrap:
         self.save_scored = save_scored
         self.verbose = verbose
         self.transform_single_mode = transform_single_mode
-        self.ml_data_dir = ml_data_dir
-        self.sample_dir = sample_dir
-        self.models_dir = models_dir
-        self.model_path = model_path
-        self.mapping = self._load_mapping(mapping_path)
 
         self.process_controller = ProcessController(verbose=self.verbose, flags=['--release'])
         self.simulation = SimulationInterface(verbose=self.verbose)
         self.observation_transformer = ObservationTransformer(["MIN", "ALL"])
-        if self.mode == "mlmodel":
-            self.actor = DecisionTreeActor(
-                dataset_dir=self.ml_data_dir,
-                sample_dir=self.sample_dir,
-                models_dir=self.models_dir,
-                model_path=self.model_path,
-                mapping=self.mapping,
-                mode=self.transform_single_mode
-            )
+        self.actor = MLClassifier(
+            mapping_path=mapping_path,
+            mode=self.transform_single_mode
+        )
+        self.actor.load(model_path)
 
         self.process_controller.start_simulation()
         time.sleep(5)
@@ -62,19 +51,13 @@ class Bootstrap:
         self.sequence = []
         self.sequences = []
 
-        self.allowed_keys = list(self.mapping.keys())[1:]
+        self.allowed_keys = list(self.actor.mapping.keys())[1:]
 
         self.thread_executor = ThreadPoolExecutor(max_workers=10)
         self.lock = threading.Lock()
         self.task_queue = Queue()
 
 
-    def _load_mapping(self, mapping_path):
-        with open(mapping_path, 'r') as f:
-            mapping = json.loads(f.read())
-        return mapping
-
-        
     def run(self):
         time.sleep(1)
         if self.mode == "user":

@@ -1,35 +1,28 @@
 #!/usr/bin/python3
+
 import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
-from scripts.machine_learning import DecisionTreeActor
-
-with open("./mapping.json", 'r') as f:
-    mapping = json.loads(f.read())
+from scripts.machine_learning import MLClassifier
 
 
 def main():
-    actor = DecisionTreeActor(
-        dataset_dir="./datasets",
-        sample_dir="./samples",
-        models_dir="./models",
-        model_path="./model.pkl",
-        mapping=mapping,
+    actor = MLClassifier(
+        mapping_path='./mapping.json',
         mode="ALL",
-        drop_empty_keys=True,
-        model=KNeighborsClassifier() # SVC(C=1.0, kernel='rbf', gamma='scale')
+        drop_empty_keys=True
     )
-    # actor.samples_to_dataset("dataset.json")
+    actor.load('./models/model.pkl')
     actor.samples_to_database()
-    actor.read_dataset("dataset.db")
+    actor.read_dataset()
     actor.train_test_split()
-    actor.train()
+    actor.fit()
     accuracy = actor.evaluate()
     print(accuracy)
-    actor.save_model("model.pkl")
+    actor.save("./models/model.pkl")
 
 
 if __name__ == "__main__":
