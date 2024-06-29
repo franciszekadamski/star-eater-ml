@@ -22,25 +22,25 @@ class ObservationTransformer:
 
 
     @staticmethod
-    def transform_single(input_sample, mode, trim):
+    def transform_single(input_sample, mode, trim, n_last):
         input_sample = list(input_sample)
         if mode == "MIN":
-            sample = ObservationTransformer.min_transform(input_sample, trim)
+            sample = ObservationTransformer.min_transform(input_sample, trim, n_last)
         elif mode == "ALL":
-            sample = ObservationTransformer.all_transform(input_sample, trim)
+            sample = ObservationTransformer.all_transform(input_sample, trim, n_last)
 
         return sample
 
 
     # TODO delay
     @staticmethod
-    def min_transform(input_sample, trim):
+    def min_transform(input_sample, trim, n_last):
         result = {
             "observations": [],
             "actions": []
         }
         
-        for record in input_sample[:-trim]:
+        for record in input_sample[-(trim + n_last):-trim]:
             result["actions"].append(record["out"])
             stars = np.asarray(record["in"]["stars"][1:])
             stars = np.abs(stars).min(axis=0)
@@ -53,13 +53,13 @@ class ObservationTransformer:
 
     # TODO delay
     @staticmethod
-    def all_transform(input_sample, trim):
+    def all_transform(input_sample, trim, n_last):
         result = {
             "observations": [],
             "actions": []
         }
         
-        for record in input_sample[:-trim]:
+        for record in input_sample[-(trim + n_last):-trim]:
             result["actions"].append(record["out"])
             stars = np.asarray(record["in"]["stars"][1:])
             stars = np.abs(stars).flatten()

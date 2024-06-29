@@ -17,7 +17,7 @@ from scripts.simulation_interface import SimulationInterface
 from scripts.preprocessing import Preprocessing
 from scripts.observation_transformer import ObservationTransformer
 from scripts.machine_learning import MLClassifier
-# from scripts.ann import RNNModel
+from scripts.ann import RNNClassifier
 
 
 class Bootstrap:
@@ -27,7 +27,7 @@ class Bootstrap:
             save_scored=False,
             verbose=0,
             transform_single_mode="MIN",
-            model_path="./models/model.pkl",
+            model_path="./models/model.h5",
             mapping_path="./mapping.json"
     ):
         self.mode = mode
@@ -38,7 +38,7 @@ class Bootstrap:
         self.process_controller = ProcessController(verbose=self.verbose, flags=['--release'])
         self.simulation = SimulationInterface(verbose=self.verbose)
         self.observation_transformer = ObservationTransformer(["MIN", "ALL"])
-        self.actor = MLClassifier(
+        self.actor = RNNClassifier(
             mapping_path=mapping_path,
             mode=self.transform_single_mode
         )
@@ -78,9 +78,11 @@ class Bootstrap:
                 data = ObservationTransformer.transform_single(
                     input_sample=self.simulation.history,
                     mode=self.transform_single_mode,
-                    trim=3
+                    trim=3,
+                    n_last=1
                 )
                 self.sequences = self.actor.act(data["observations"])
+                print(self.sequences)
                 for sequence in self.sequences:
                     self.simulation.add_messages(sequence)
                     self._handle_just_scored()

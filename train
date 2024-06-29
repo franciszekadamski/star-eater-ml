@@ -7,22 +7,23 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
 from scripts.machine_learning import MLClassifier
+from scripts.ann import RNNClassifier
 
 
 def main():
-    actor = MLClassifier(
+    actor = RNNClassifier(
         mapping_path='./mapping.json',
         mode="ALL",
-        drop_empty_keys=True
+        drop_empty_keys=False
     )
-    actor.load('./models/model.pkl')
+    # actor.load('./models/model.h5')
     actor.samples_to_database()
     actor.read_dataset()
     actor.train_test_split()
     actor.fit()
-    accuracy = actor.evaluate()
-    print(accuracy)
-    actor.save("./models/model.pkl")
+#     accuracy = actor.evaluate()
+#     print(accuracy)
+    actor.save("./models/model.h5")
 
 
 if __name__ == "__main__":
