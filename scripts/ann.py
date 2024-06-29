@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense, Input
+from tensorflow.keras.layers import LSTM, SimpleRNN, Dense, Input
 from tensorflow.keras.utils import to_categorical
 
 from scripts.database import DatabaseInterface
@@ -23,7 +23,7 @@ class RNNClassifier(MLClassifier):
                 mapping_path,
                 mode,
                 batch_size=32,
-                epochs=50,
+                epochs=100,
                 validation_split=0.0,
                 drop_empty_keys=False,
                 database_path='./datasets/dataset.db',
@@ -68,11 +68,13 @@ class RNNClassifier(MLClassifier):
     def _build(self):
         self.model.add(Input(self.input_shape))
         self.model.add(
-            SimpleRNN(
-                units=50,
+            LSTM(
+                units=200,
                 return_sequences=False
             )
         )
+        self.model.add(Dense(100))
+        self.model.add(Dense(50))
         self.model.add(Dense(self.number_of_classes))
         self.model.summary()
 
@@ -80,7 +82,13 @@ class RNNClassifier(MLClassifier):
     def _compile(self):
         self.model.compile(
             optimizer='adam',
-            loss='mean_squared_error'
+            loss='mean_squared_error',
+            metrics=[
+                tf.keras.metrics.CategoricalAccuracy(),
+                tf.keras.metrics.F1Score(),
+                tf.keras.metrics.Precision(),
+                tf.keras.metrics.Recall()
+            ]
         )
 
 

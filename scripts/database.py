@@ -58,7 +58,6 @@ class DatabaseInterface:
         self._connect()
         query = 'SELECT * FROM data WHERE id >= 0'
         df = pd.read_sql_query(query, self.connection)
-        print(df.head)
         self._disconnect()
         return df
 

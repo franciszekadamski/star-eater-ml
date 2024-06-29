@@ -14,7 +14,9 @@ def main():
     actor = RNNClassifier(
         mapping_path='./mapping.json',
         mode="ALL",
-        drop_empty_keys=False
+        drop_empty_keys=True,
+        epochs=200,
+        batch_size=1024
     )
     # actor.load('./models/model.h5')
     actor.samples_to_database()
