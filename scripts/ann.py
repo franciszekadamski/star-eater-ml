@@ -72,42 +72,25 @@ class RNNClassifier(MLClassifier):
 
     def _build(self):
         n = int(np.asarray(self.input_shape).flatten().sum())
-        def LSTM_unit(scale=1, reshape=True):        
-            units = int(n * scale // 1)
-            self.model.add(BatchNormalization())
-            self.model.add(
-                LSTM(
-                    units=units,
-                    return_sequences=False
-                )
-            )
-            self.model.add(Dense(units))
-            self.model.add(Dropout(0.1))
-            if reshape:
-                self.model.add(Reshape((units, 1)))
+        def LSTM_unit(scale=1, return_sequences=True):
+          units = int(n * scale // 1)
+          self.model.add(LSTM(units=units, return_sequences=return_sequences))
+          self.model.add(BatchNormalization())
+          self.model.add(Dropout(0.04))
 
-        def GRU_unit(scale=1, reshape=True):        
-            units = int(n * scale // 1)
-            self.model.add(BatchNormalization())
-            self.model.add(
-                GRU(
-                    units=units,
-                    return_sequences=False
-                )
-            )
-            self.model.add(Dense(units))
-            self.model.add(Dropout(0.1))
-            if reshape:
-                self.model.add(Reshape((units, 1)))
-
+        def GRU_unit(scale=1, return_sequences=True):
+          units = int(n * scale // 1)
+          self.model.add(GRU(units=units, return_sequences=return_sequences))
+          self.model.add(BatchNormalization())
+          self.model.add(Dropout(0.04))
 
         self.model.add(Input(self.input_shape))
-        for scale in [1, 2, 3, 4, 3, 2, 1]:
-            GRU_unit(scale)
-        GRU_unit(1, False)
+        for scale in range(10):
+            LSTM_unit(5)
+        LSTM_unit(1, False)
         self.model.add(Dense(n))
-        self.model.add(Dense(self.number_of_classes))
-        
+        self.model.add(Dense(self.number_of_classes, activation='softmax'))
+
         self.model.summary()
 
 
