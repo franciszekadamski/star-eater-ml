@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, SimpleRNN, Dense, Input, Reshape
+from tensorflow.keras.layers import LSTM, SimpleRNN, GRU, Dense, Input, Reshape, Dropout, BatchNormalization
 from tensorflow.keras.utils import to_categorical
 
 from scripts.database import DatabaseInterface
@@ -71,23 +71,50 @@ class RNNClassifier(MLClassifier):
 
 
     def _build(self):
-        self.model.add(Input(self.input_shape))
-        self.model.add(
-            LSTM(
-                units=200,
-                return_sequences=False
+        n = int(np.asarray(self.input_shape).flatten().sum())
+        def LSTM_unit(scale=1, reshape=True):        
+            units = int(n * scale // 1)
+            self.model.add(BatchNormalization())
+            self.model.add(
+                LSTM(
+                    units=units,
+                    return_sequences=False
+                )
             )
-        )
-        self.model.add(Dense(100))
-        self.model.add(Dense(50))
+            self.model.add(Dense(units))
+            self.model.add(Dropout(0.1))
+            if reshape:
+                self.model.add(Reshape((units, 1)))
+
+        def GRU_unit(scale=1, reshape=True):        
+            units = int(n * scale // 1)
+            self.model.add(BatchNormalization())
+            self.model.add(
+                GRU(
+                    units=units,
+                    return_sequences=False
+                )
+            )
+            self.model.add(Dense(units))
+            self.model.add(Dropout(0.1))
+            if reshape:
+                self.model.add(Reshape((units, 1)))
+
+
+        self.model.add(Input(self.input_shape))
+        for scale in [1, 2, 3, 4, 3, 2, 1]:
+            GRU_unit(scale)
+        GRU_unit(1, False)
+        self.model.add(Dense(n))
         self.model.add(Dense(self.number_of_classes))
+        
         self.model.summary()
 
 
     def _compile(self):
         self.model.compile(
             optimizer='adam',
-            loss='categorical_crossentropy',
+            loss='mean_squared_error',
             metrics=[
                 tf.keras.metrics.CategoricalAccuracy(),
                 tf.keras.metrics.F1Score(),
@@ -137,11 +164,12 @@ class RNNClassifier(MLClassifier):
 
     def save(self, model_path):
         assert model_path.endswith('.keras')
-        joblib.dump(self.scaler, model_path.replace('.keras', '.pkl'))
+        joblib.dump(self.scaler, './models/scaler.pkl')
         self.model.save(model_path)
 
 
-    def load(self, model_path):
+    def load(self, model_path, scaler=False):
         assert model_path.endswith('.keras')
-        self.scaler = joblib.load(model_path.replace('.keras', '.pkl'))
+        if scaler:
+            self.scaler = joblib.load('./models/scaler.pkl')
         self.model = tf.keras.models.load_model(model_path)

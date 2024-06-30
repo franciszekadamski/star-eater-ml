@@ -42,7 +42,7 @@ class Bootstrap:
             mapping_path=mapping_path,
             mode=self.transform_single_mode
         )
-        self.actor.load(model_path)
+        self.actor.load(model_path, scaler=True)
 
         self.process_controller.start_simulation()
         time.sleep(5)
