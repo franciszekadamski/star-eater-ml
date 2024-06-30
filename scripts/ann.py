@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, SimpleRNN, Dense, Input
+from tensorflow.keras.layers import LSTM, SimpleRNN, Dense, Input, Reshape
 from tensorflow.keras.utils import to_categorical
 
 from scripts.database import DatabaseInterface
@@ -24,7 +24,7 @@ class RNNClassifier(MLClassifier):
                 mode,
                 batch_size=32,
                 epochs=100,
-                validation_split=0.0,
+                validation_split=0.2,
                 drop_empty_keys=False,
                 database_path='./datasets/dataset.db',
                 number_of_stars=10
@@ -50,6 +50,11 @@ class RNNClassifier(MLClassifier):
         
         self.history = None
         self.loss = None
+
+        self.fit_callbacks = [
+            tf.keras.callbacks.TensorBoard(log_dir='./logs'),
+            tf.keras.callbacks.ModelCheckpoint(filepath='./models/model.{epoch:02d}-{val_loss:.2f}.keras')
+        ]
 
 
     def _encode_targets(self, targets):
@@ -82,7 +87,7 @@ class RNNClassifier(MLClassifier):
     def _compile(self):
         self.model.compile(
             optimizer='adam',
-            loss='mean_squared_error',
+            loss='categorical_crossentropy',
             metrics=[
                 tf.keras.metrics.CategoricalAccuracy(),
                 tf.keras.metrics.F1Score(),
@@ -103,7 +108,7 @@ class RNNClassifier(MLClassifier):
         if batch_size:
             self.batch_size = batch_size
         if validation_split:
-            self.validation_split = validation_split    
+            self.validation_split = validation_split
         print(f"Input shape: {self.input_shape}")
         scaled_X_train = self.scaler.fit_transform(self.X_train)
         self.history = self.model.fit(
@@ -111,7 +116,8 @@ class RNNClassifier(MLClassifier):
             np.asarray(self.y_train),
             epochs=self.epochs,
             batch_size=self.batch_size,
-            validation_split=self.validation_split
+            validation_split=self.validation_split,
+            callbacks=self.fit_callbacks
         )
 
 
@@ -130,12 +136,12 @@ class RNNClassifier(MLClassifier):
 
 
     def save(self, model_path):
-        assert model_path.endswith('.h5')
-        joblib.dump(self.scaler, model_path.replace('.h5', '.pkl'))
+        assert model_path.endswith('.keras')
+        joblib.dump(self.scaler, model_path.replace('.keras', '.pkl'))
         self.model.save(model_path)
 
 
     def load(self, model_path):
-        assert model_path.endswith('.h5')
-        self.scaler = joblib.load(model_path.replace('.h5', '.pkl'))
+        assert model_path.endswith('.keras')
+        self.scaler = joblib.load(model_path.replace('.keras', '.pkl'))
         self.model = tf.keras.models.load_model(model_path)

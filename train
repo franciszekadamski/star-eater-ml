@@ -15,17 +15,15 @@ def main():
         mapping_path='./mapping.json',
         mode="ALL",
         drop_empty_keys=True,
-        epochs=200,
-        batch_size=1024
+        epochs=1000,
+        batch_size=256
     )
     # actor.load('./models/model.h5')
-    actor.samples_to_database()
+    # actor.samples_to_database()
     actor.read_dataset()
     actor.train_test_split()
     actor.fit()
-#     accuracy = actor.evaluate()
-#     print(accuracy)
-    actor.save("./models/model.h5")
+    # actor.save("./models/model.keras")
 
 
 if __name__ == "__main__":

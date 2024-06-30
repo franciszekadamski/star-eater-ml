@@ -27,7 +27,7 @@ class Bootstrap:
             save_scored=False,
             verbose=0,
             transform_single_mode="MIN",
-            model_path="./models/model.h5",
+            model_path="./models/model.keras",
             mapping_path="./mapping.json"
     ):
         self.mode = mode
